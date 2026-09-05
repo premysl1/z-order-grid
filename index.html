@@ -124,7 +124,7 @@ document.addEventListener(`keydown`, e => {
             clearInterval(id);
             isRunning = false;
         } else {
-            id = setInterval(addSquare);
+            id = setInterval(addSquare, speedMs);
             isRunning = true;
         }
     }
