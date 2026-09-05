@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rectangle Tiling Canvas</title>
+    <link href="./base.css/base.css" rel="stylesheet">
+    <link href="./base.css/blueprint.css" rel="stylesheet">
+    <style>
+html, body {
+    height: 100%;
+}
+
+body {
+    background: black;
+}
+    </style>
+</head>
+<body>
+    <canvas class="wh_100"></canvas>
+    <script>
+const canvas = document.querySelector(`canvas`);
+canvas.width = innerWidth;
+canvas.height = innerHeight;
+const ctx = canvas.getContext(`2d`);
+
+let boundingSquareSize;
+function updateBoundingSquare() {
+    boundingSquareSize = Math.min(canvas.width, canvas.height);
+}
+updateBoundingSquare();
+
+let tx;
+let ty;
+function updateContainOffset() {
+    tx = (canvas.width - boundingSquareSize) * 0.5;
+    ty = (canvas.height - boundingSquareSize) * 0.5;
+}
+updateContainOffset();
+
+const lineWidthRatio = 0.02;
+
+let boundingLineWidth;
+let boundingLineWidthOffset;
+function updateBoundingLineWidth() {
+    boundingLineWidth = boundingSquareSize * lineWidthRatio;
+    boundingLineWidthOffset = boundingLineWidth * 0.5;
+}
+
+const resize = new ResizeObserver(() => {
+    canvas.width = innerWidth;
+    canvas.height = innerHeight;
+    updateBoundingSquare();
+    updateContainOffset();
+    updateBoundingLineWidth();
+    rerender();
+});
+
+resize.observe(document.body);
+
+const transparentRed = `#f00a`;
+const transparentBlue = `#0ffa`;
+let gridColor = [transparentBlue, true];
+function drawSquare(squareIndex, level) {
+    let col = 0;
+    let row = 0;
+    for (let b = 0; b < level; b++) {
+        const stepOut = 2 * b;
+        const bitX = (squareIndex >> stepOut) & 1;
+        const bitY = (squareIndex >> (stepOut + 1)) & 1;
+        col |= bitX << b;
+        row |= bitY << b;
+    }
+    
+    const squareSize = boundingSquareSize * 1 / (1 << level);
+    const x = tx + col * squareSize;
+    const y = ty + row * squareSize;
+
+    ctx.strokeStyle = gridColor[0];
+    ctx.lineWidth = squareSize * lineWidthRatio;
+    ctx.strokeRect(
+        x,
+        y,
+        squareSize,
+        squareSize
+    );
+}
+
+let squareCount = 0;
+let level = 0;
+
+function rerender() {
+    for (let i = 0; i < squareCount; i++) drawSquare(i, level);
+}
+
+function clearGrid() {
+    ctx.clearRect(
+    tx - boundingLineWidthOffset,
+    ty - boundingLineWidthOffset,
+    boundingSquareSize + boundingLineWidth,
+    boundingSquareSize + boundingLineWidth);
+}
+
+function addSquare() {
+    squareCount++;
+
+    const capacity = 1 << (2 * level);
+    if (squareCount > capacity) {
+        clearGrid();
+        level++;
+        rerender();
+    } else {
+        drawSquare(squareCount - 1, level);
+    }
+}
+
+let id = setInterval(addSquare);
+let speedMs = 0;
+let isRunning = true;
+
+document.addEventListener(`keydown`, e => {
+    if (e.code === `Space`) {
+        if (isRunning) {
+            clearInterval(id);
+            isRunning = false;
+        } else {
+            id = setInterval(addSquare);
+            isRunning = true;
+        }
+    }
+    if (e.code === `KeyR`) {
+        squareCount = 0;
+        level = 0;
+        clearGrid();
+        rerender();
+    }
+    if (e.code === `ArrowUp`) {
+        if (gridColor[1]) {
+            gridColor[0] = transparentRed;
+            gridColor[1] = false;
+        } else {
+            gridColor[0] = transparentBlue;
+            gridColor[1] = true;
+        }
+    }
+    if (e.code === `ArrowLeft`) {
+        speedMs += 100;
+        clearInterval(id);
+        id = setInterval(addSquare, speedMs);
+    }
+    if (e.code === `ArrowRight`) {
+        if (speedMs === 0) return;
+
+        speedMs -= 100;
+        clearInterval(id);
+        id = setInterval(addSquare, speedMs);
+    }
+});
+    </script>
+</body>
+</html>
